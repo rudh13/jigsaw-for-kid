@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kids Jigsaw Puzzle Game</title>
+    <!-- Tailwind CSS for modern responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts for cute rounded typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Tone.js for kid-friendly sound effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <style>
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        .title-font {
+            font-family: 'Fredoka One', cursive;
+        }
+
+        /* Puzzle board slot design */
+        .puzzle-slot {
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.15);
+            background-color: rgba(255, 255, 255, 0.4);
+            border: 2px dashed rgba(255, 255, 255, 0.8);
+            transition: all 0.2s ease;
+        }
+
+        /* Puzzle Piece styles */
+        .puzzle-piece {
+            cursor: grab;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            touch-action: none;
+        }
+
+        .puzzle-piece:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+            z-index: 50;
+        }
+
+        .puzzle-piece.placed {
+            cursor: default;
+            box-shadow: none !important;
+            border: none !important;
+        }
+
+        /* Fun bounce keyframe animation for victory */
+        @keyframes bounce-slow {
+            0%, 100% { transform: translateY(-5%); }
+            50% { transform: translateY(5%); }
+        }
+
+        .animate-bounce-slow {
+            animation: bounce-slow 2s infinite;
+        }
+
+        /* Confetti particle effects */
+        .confetti {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: fall 3s ease-out forwards;
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-4 overflow-x-hidden">
+
+    <!-- Header Section -->
+    <header class="text-center my-2">
+        <h1 class="title-font text-4xl sm:text-5xl text-pink-600 drop-shadow-md tracking-wide flex items-center justify-center gap-3">
+            🧩 Puzzle Anak Fun 🎨
+        </h1>
+        <p class="text-gray-700 font-bold text-base sm:text-lg mt-1">
+            Tarik dan lepas potongan gambar ke tempat yang benar!
+        </p>
+    </header>
+
+    <!-- Main Game Container -->
+    <main class="w-full max-w-4xl flex flex-col items-center gap-6 my-auto">
+        
+        <!-- Level & Theme Selection Controls -->
+        <div class="flex flex-wrap justify-center gap-3 bg-white/70 backdrop-blur-md p-3 rounded-2xl shadow-lg border-2 border-white/80 w-full max-w-2xl">
+            <!-- Grid Size Selector (Easy 2x2 vs Medium 3x3) -->
+            <div class="flex items-center gap-2">
+                <span class="font-bold text-gray-700 text-sm sm:text-base">Tingkat:</span>
+                <button id="btn-easy" onclick="setGridSize(2)" class="px-4 py-2 rounded-xl font-bold bg-pink-500 text-white shadow-md hover:bg-pink-600 transition active:scale-95">
+                    Mudah (2x2)
+                </button>
+                <button id="btn-medium" onclick="setGridSize(3)" class="px-4 py-2 rounded-xl font-bold bg-gray-200 text-gray-700 hover:bg-gray-300 transition active:scale-95">
+                    Sedang (3x3)
+                </button>
+            </div>
+
+            <div class="h-6 w-0.5 bg-gray-300 hidden sm:block"></div>
+
+            <!-- Picture Selector Buttons -->
+            <div class="flex items-center gap-2 overflow-x-auto py-1">
+                <span class="font-bold text-gray-700 text-sm sm:text-base">Gambar:</span>
+                <button onclick="changeImage(0)" class="theme-btn border-2 border-pink-400 rounded-lg overflow-hidden p-0.5 hover:scale-105 transition">
+                    <img src="Judith - Lil Cute.jpg" class="w-8 h-8 rounded object-cover" alt="Cute Girl">
+                </button>
+                <button onclick="changeImage(1)" class="theme-btn border-2 border-transparent rounded-lg overflow-hidden p-0.5 hover:scale-105 transition">
+                    <img src="https://images.unsplash.com/photo-1535591273668-578e31182c4f?w=300&auto=format&fit=crop&q=60" class="w-8 h-8 rounded object-cover" alt="Lion">
+                </button>
+                <button onclick="changeImage(2)" class="theme-btn border-2 border-transparent rounded-lg overflow-hidden p-0.5 hover:scale-105 transition">
+                    <img src="https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=300&auto=format&fit=crop&q=60" class="w-8 h-8 rounded object-cover" alt="Cute Dog">
+                </button>
+                <button onclick="changeImage(3)" class="theme-btn border-2 border-transparent rounded-lg overflow-hidden p-0.5 hover:scale-105 transition">
+                    <img src="https://images.unsplash.com/photo-1563089145-599997674d42?w=300&auto=format&fit=crop&q=60" class="w-8 h-8 rounded object-cover" alt="Space Art">
+                </button>
+
+                <!-- Custom Image Upload Button -->
+                <label class="theme-btn border-2 border-dashed border-purple-500 bg-purple-50 hover:bg-purple-100 cursor-pointer rounded-lg p-0.5 w-9 h-9 flex items-center justify-center transition title-font text-purple-600 text-xs text-center" title="Upload Gambar Sendiri">
+                    <i class="fa-solid fa-plus text-base"></i>
+                    <input type="file" id="upload-image-input" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                </label>
+            </div>
+        </div>
+
+        <!-- Play Area (Split into Target Board & Tray) -->
+        <div class="flex flex-col lg:flex-row items-center justify-center gap-8 w-full">
+            
+            <!-- Target Puzzle Grid Board -->
+            <div class="flex flex-col items-center">
+                <div class="text-sm font-bold text-gray-600 mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-bullseye text-pink-500"></i> Tempatkan Di Sini:
+                </div>
+                <div id="puzzle-board" class="relative bg-white/60 p-3 rounded-2xl shadow-xl border-4 border-white grid gap-1.5 transition-all duration-300">
+                    <!-- Grid slots will be dynamically generated here -->
+                </div>
+            </div>
+
+            <!-- Puzzle Pieces Pool/Tray -->
+            <div class="flex flex-col items-center">
+                <div class="text-sm font-bold text-gray-600 mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-shapes text-purple-500"></i> Potongan Gambar:
+                </div>
+                <div id="pieces-tray" class="bg-white/80 p-4 rounded-2xl shadow-xl border-4 border-white min-w-[280px] min-h-[280px] flex flex-wrap items-center justify-center gap-3 max-w-xs sm:max-w-md">
+                    <!-- Scattered pieces will be appended here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Action Buttons -->
+        <div class="flex gap-4 mt-2">
+            <button onclick="initPuzzle()" class="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold bg-yellow-400 text-yellow-900 shadow-lg hover:bg-yellow-300 transition transform active:scale-95 text-lg">
+                <i class="fa-solid fa-rotate-right"></i> Acak Ulang
+            </button>
+            <button id="hint-btn" onclick="toggleHint()" class="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold bg-blue-400 text-white shadow-lg hover:bg-blue-500 transition transform active:scale-95 text-lg">
+                <i class="fa-solid fa-lightbulb"></i> Bantuan
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Celebration Modal Popup -->
+    <div id="win-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border-4 border-yellow-300 transform animate-bounce-slow relative">
+            <div class="text-6xl mb-3">🎉 🦁 🏆</div>
+            <h2 class="title-font text-3xl text-pink-500 mb-2">Hore! Berhasil!</h2>
+            <p class="text-gray-600 font-semibold mb-6">Kamu pintar sekali! Puzzle selesai dengan sempurna.</p>
+            
+            <button onclick="closeWinModal()" class="w-full py-4 rounded-2xl font-bold bg-green-500 text-white text-xl shadow-lg hover:bg-green-600 transition transform active:scale-95">
+                Main Lagi 🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center text-gray-500 text-xs sm:text-sm my-2">
+        Game Puzzle Sederhana Anak • Didesain untuk keceriaan dan belajar!
+    </footer>
+
+    <!-- Game Logic Script -->
+    <script>
+        // Game Configuration State
+        const images = [
+            'Judith - Lil Cute.jpg', // Dedicated photo choice
+            'https://images.unsplash.com/photo-1535591273668-578e31182c4f?w=600&auto=format&fit=crop&q=80', // Lion
+            'https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=600&auto=format&fit=crop&q=80', // Dog
+            'https://images.unsplash.com/photo-1563089145-599997674d42?w=600&auto=format&fit=crop&q=80'  // Space Art
+        ];
+
+        let customImageUrl = null;
+        let currentImageIndex = 0;
+        let gridSize = 2; // Default 2x2 grid for young kids
+        let piecesPlaced = 0;
+        let totalPieces = 4;
+        let showHintState = false;
+
+        // Sound Synthesis Setup using Tone.js
+        let synth;
+        function initAudio() {
+            if (!synth) {
+                synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                synth.volume.value = -6;
+            }
+        }
+
+        // Play pleasant success sound
+        function playSnapSound() {
+            try {
+                initAudio();
+                Tone.start();
+                synth.triggerAttackRelease(["C5", "E5", "G5"], "8n");
+            } catch (e) { console.log("Audio not allowed yet"); }
+        }
+
+        // Play celebratory chime sound
+        function playWinSound() {
+            try {
+                initAudio();
+                Tone.start();
+                const now = Tone.now();
+                synth.triggerAttackRelease("C4", "8n", now);
+                synth.triggerAttackRelease("E4", "8n", now + 0.15);
+                synth.triggerAttackRelease("G4", "8n", now + 0.3);
+                synth.triggerAttackRelease("C5", "4n", now + 0.45);
+            } catch (e) { console.log("Audio play error"); }
+        }
+
+        // Handle user uploading custom image
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    customImageUrl = e.target.result;
+                    currentImageIndex = -1; // -1 represents custom uploaded image
+                    
+                    // Remove active highlight from pre-set buttons
+                    const buttons = document.querySelectorAll('.theme-btn');
+                    buttons.forEach(btn => {
+                        btn.classList.remove('border-pink-400');
+                        btn.classList.add('border-transparent');
+                    });
+
+                    initPuzzle();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Initialize and setup board
+        function initPuzzle() {
+            piecesPlaced = 0;
+            totalPieces = gridSize * gridSize;
+            showHintState = false;
+
+            const board = document.getElementById('puzzle-board');
+            const tray = document.getElementById('pieces-tray');
+            const currentImgUrl = currentImageIndex === -1 ? customImageUrl : images[currentImageIndex];
+
+            // Clear previous elements
+            board.innerHTML = '';
+            tray.innerHTML = '';
+
+            // Calculate puzzle board dimensions dynamically based on screen size
+            const boardSize = Math.min(window.innerWidth - 60, 320); 
+            const pieceSize = Math.floor(boardSize / gridSize);
+
+            board.style.gridTemplateColumns = `repeat(${gridSize}, ${pieceSize}px)`;
+            board.style.width = `${boardSize + (gridSize * 6)}px`; // Adjust padding
+
+            // Create Array of piece indexes [0, 1, ..., N]
+            let piecesIndices = Array.from({ length: totalPieces }, (_, i) => i);
+
+            // Generate slots and pieces
+            piecesIndices.forEach((index) => {
+                const row = Math.floor(index / gridSize);
+                const col = index % gridSize;
+
+                // 1. Target Board Slot
+                const slot = document.createElement('div');
+                slot.className = 'puzzle-slot rounded-xl relative overflow-hidden flex items-center justify-center';
+                slot.style.width = `${pieceSize}px`;
+                slot.style.height = `${pieceSize}px`;
+                slot.dataset.index = index;
+
+                // Optional Hint image overlay inside slot
+                const hintImg = document.createElement('div');
+                hintImg.className = 'hint-overlay absolute inset-0 opacity-10 transition-opacity duration-300 pointer-events-none';
+                hintImg.style.backgroundImage = `url('${currentImgUrl}')`;
+                hintImg.style.backgroundSize = `${boardSize}px ${boardSize}px`;
+                hintImg.style.backgroundPosition = `-${col * pieceSize}px -${row * pieceSize}px`;
+                slot.appendChild(hintImg);
+
+                // Setup Drag & Drop listeners on target slots
+                slot.addEventListener('dragover', handleDragOver);
+                slot.addEventListener('drop', handleDrop);
+
+                board.appendChild(slot);
+            });
+
+            // Shuffle piece indices for scattered tray placement
+            let shuffledIndices = [...piecesIndices].sort(() => Math.random() - 0.5);
+
+            shuffledIndices.forEach((index) => {
+                const row = Math.floor(index / gridSize);
+                const col = index % gridSize;
+
+                // 2. Draggable Puzzle Piece
+                const piece = document.createElement('div');
+                piece.className = 'puzzle-piece rounded-xl shadow-md border-2 border-white overflow-hidden bg-cover';
+                piece.style.width = `${pieceSize}px`;
+                piece.style.height = `${pieceSize}px`;
+                piece.style.backgroundImage = `url('${currentImgUrl}')`;
+                piece.style.backgroundSize = `${boardSize}px ${boardSize}px`;
+                piece.style.backgroundPosition = `-${col * pieceSize}px -${row * pieceSize}px`;
+                
+                piece.draggable = true;
+                piece.dataset.index = index;
+                piece.id = `piece-${index}`;
+
+                // Event Listeners for Mouse Dragging
+                piece.addEventListener('dragstart', handleDragStart);
+
+                // Event Listeners for Mobile Touch Screen Dragging
+                piece.addEventListener('touchstart', handleTouchStart, { passive: false });
+                piece.addEventListener('touchmove', handleTouchMove, { passive: false });
+                piece.addEventListener('touchend', handleTouchEnd);
+
+                tray.appendChild(piece);
+            });
+
+            updateHintVisuals();
+        }
+
+        // Grid Size toggle logic
+        function setGridSize(size) {
+            gridSize = size;
+            document.getElementById('btn-easy').className = size === 2 
+                ? 'px-4 py-2 rounded-xl font-bold bg-pink-500 text-white shadow-md hover:bg-pink-600 transition active:scale-95'
+                : 'px-4 py-2 rounded-xl font-bold bg-gray-200 text-gray-700 hover:bg-gray-300 transition active:scale-95';
+            
+            document.getElementById('btn-medium').className = size === 3 
+                ? 'px-4 py-2 rounded-xl font-bold bg-pink-500 text-white shadow-md hover:bg-pink-600 transition active:scale-95'
+                : 'px-4 py-2 rounded-xl font-bold bg-gray-200 text-gray-700 hover:bg-gray-300 transition active:scale-95';
+
+            initPuzzle();
+        }
+
+        // Change Active Puzzle Image
+        function changeImage(index) {
+            currentImageIndex = index;
+            const buttons = document.querySelectorAll('.theme-btn');
+            buttons.forEach((btn, idx) => {
+                if(idx === index) {
+                    btn.classList.add('border-pink-400');
+                    btn.classList.remove('border-transparent');
+                } else {
+                    btn.classList.remove('border-pink-400');
+                    btn.classList.add('border-transparent');
+                }
+            });
+            initPuzzle();
+        }
+
+        // Drag & Drop Handlers (Desktop Mouse)
+        function handleDragStart(e) {
+            e.dataTransfer.setData('text/plain', e.target.dataset.index);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const pieceIndex = e.dataTransfer.getData('text/plain');
+            const targetSlot = e.currentTarget;
+            
+            checkAndPlacePiece(pieceIndex, targetSlot);
+        }
+
+        // Touch Drag Handlers (Mobile / Tablets)
+        let activePiece = null;
+        let touchOffsetX = 0;
+        let touchOffsetY = 0;
+
+        function handleTouchStart(e) {
+            const touch = e.touches[0];
+            activePiece = e.currentTarget;
+            
+            const rect = activePiece.getBoundingClientRect();
+            touchOffsetX = touch.clientX - rect.left;
+            touchOffsetY = touch.clientY - rect.top;
+
+            activePiece.style.position = 'fixed';
+            activePiece.style.zIndex = '1000';
+            moveAt(touch.clientX, touch.clientY);
+        }
+
+        function handleTouchMove(e) {
+            if (!activePiece) return;
+            e.preventDefault(); // Prevent scrolling while dragging puzzle piece
+            const touch = e.touches[0];
+            moveAt(touch.clientX, touch.clientY);
+        }
+
+        function moveAt(pageX, pageY) {
+            if (!activePiece) return;
+            activePiece.style.left = `${pageX - touchOffsetX}px`;
+            activePiece.style.top = `${pageY - touchOffsetY}px`;
+        }
+
+        function handleTouchEnd(e) {
+            if (!activePiece) return;
+
+            // Hide element temporarily to find slot element underneath touch point
+            activePiece.style.display = 'none';
+            const touch = e.changedTouches[0];
+            const elemBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            activePiece.style.display = 'block';
+
+            const targetSlot = elemBelow ? elemBelow.closest('.puzzle-slot') : null;
+
+            // Reset inline fixed positioning
+            activePiece.style.position = '';
+            activePiece.style.left = '';
+            activePiece.style.top = '';
+            activePiece.style.zIndex = '';
+
+            if (targetSlot) {
+                checkAndPlacePiece(activePiece.dataset.index, targetSlot);
+            }
+
+            activePiece = null;
+        }
+
+        // Common placement evaluation logic
+        function checkAndPlacePiece(pieceIndex, targetSlot) {
+            // Verify if piece matches slot index and slot is empty
+            if (targetSlot.dataset.index === pieceIndex && !targetSlot.querySelector('.puzzle-piece')) {
+                const piece = document.getElementById(`piece-${pieceIndex}`);
+                
+                // Lock piece into slot
+                piece.draggable = false;
+                piece.classList.add('placed');
+                piece.removeEventListener('touchstart', handleTouchStart);
+                piece.removeEventListener('touchmove', handleTouchMove);
+                piece.removeEventListener('touchend', handleTouchEnd);
+
+                targetSlot.appendChild(piece);
+                
+                playSnapSound();
+                piecesPlaced++;
+
+                // Check Win Condition
+                if (piecesPlaced === totalPieces) {
+                    setTimeout(() => {
+                        triggerWin();
+                    }, 300);
+                }
+            }
+        }
+
+        // Toggle visual helper overlay
+        function toggleHint() {
+            showHintState = !showHintState;
+            updateHintVisuals();
+        }
+
+        function updateHintVisuals() {
+            const hints = document.querySelectorAll('.hint-overlay');
+            hints.forEach(h => {
+                h.style.opacity = showHintState ? '0.35' : '0.08';
+            });
+        }
+
+        // Win Celebration logic
+        function triggerWin() {
+            playWinSound();
+            createConfetti();
+            document.getElementById('win-modal').classList.remove('hidden');
+        }
+
+        function closeWinModal() {
+            document.getElementById('win-modal').classList.add('hidden');
+            initPuzzle();
+        }
+
+        // Fun Confetti Animation Generator
+        function createConfetti() {
+            const colors = ['#f472b6', '#38bdf8', '#facc15', '#4ade80', '#c084fc'];
+            for (let i = 0; i < 40; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = `${Math.random() * 100}vw`;
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDuration = `${2 + Math.random() * 2}s`;
+                document.body.appendChild(confetti);
+
+                setTimeout(() => confetti.remove(), 4000);
+            }
+        }
+
+        // Window Load Event Listener
+        window.onload = function () {
+            initPuzzle();
+        };
+
+        // Window Resize recalculation
+        window.addEventListener('resize', () => {
+            initPuzzle();
+        });
+    </script>
+</body>
+</html>
