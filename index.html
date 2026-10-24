@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Susun Gambar</title>
+    <title>Kids Jigsaw Puzzle Game</title>
     <!-- Tailwind CSS for modern responsive styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome for icons -->
@@ -83,7 +83,7 @@
     <!-- Header Section -->
     <header class="text-center my-2">
         <h1 class="title-font text-4xl sm:text-5xl text-pink-600 drop-shadow-md tracking-wide flex items-center justify-center gap-3">
-            🧩 Susun Gambar 🎨
+            🧩 Puzzle Anak Fun 🎨
         </h1>
         <p class="text-gray-700 font-bold text-base sm:text-lg mt-1">
             Tarik dan lepas potongan gambar ke tempat yang benar!
@@ -104,6 +104,19 @@
                 <button id="btn-medium" onclick="setGridSize(3)" class="px-4 py-2 rounded-xl font-bold bg-gray-200 text-gray-700 hover:bg-gray-300 transition active:scale-95">
                     Sedang (3x3)
                 </button>
+            </div>
+
+            <div class="h-6 w-0.5 bg-gray-300 hidden sm:block"></div>
+
+            <!-- Timer Toggle & Best Time Display -->
+            <div class="flex items-center gap-3">
+                <button id="timer-toggle-btn" onclick="toggleTimerSetting()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-500 text-white shadow hover:bg-emerald-600 transition active:scale-95">
+                    <i class="fa-solid fa-stopwatch"></i> Timer: ON
+                </button>
+                <div id="timer-display-container" class="flex items-center gap-2 bg-amber-100/80 px-3 py-1 rounded-xl text-amber-900 font-bold text-xs sm:text-sm border border-amber-300">
+                    <span id="timer-text">⏱️ 00:00</span>
+                    <span id="best-time-text" class="text-xs text-amber-700 font-normal border-l border-amber-300 pl-2">Terbaik: --:--</span>
+                </div>
             </div>
 
             <div class="h-6 w-0.5 bg-gray-300 hidden sm:block"></div>
@@ -173,7 +186,12 @@
         <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border-4 border-yellow-300 transform animate-bounce-slow relative">
             <div class="text-6xl mb-3">🎉 🦁 🏆</div>
             <h2 class="title-font text-3xl text-pink-500 mb-2">Hore! Berhasil!</h2>
-            <p class="text-gray-600 font-semibold mb-6">Kamu pintar sekali! Puzzle selesai dengan sempurna.</p>
+            <p class="text-gray-600 font-semibold mb-2">Kamu pintar sekali! Puzzle selesai dengan sempurna.</p>
+            
+            <!-- Result Stats inside Win Modal -->
+            <div id="win-timer-stats" class="bg-yellow-50 rounded-xl p-3 my-4 border border-yellow-200 text-sm font-bold text-yellow-800">
+                Waktu kamu: <span id="final-time" class="text-pink-600">00:00</span>
+            </div>
             
             <button onclick="closeWinModal()" class="w-full py-4 rounded-2xl font-bold bg-green-500 text-white text-xl shadow-lg hover:bg-green-600 transition transform active:scale-95">
                 Main Lagi 🚀
@@ -181,7 +199,10 @@
         </div>
     </div>
 
-   
+    <!-- Footer -->
+    <footer class="text-center text-gray-500 text-xs sm:text-sm my-2">
+        Selamat bermain anak-anak yang pintar!
+    </footer>
 
     <!-- Game Logic Script -->
     <script>
@@ -199,6 +220,72 @@
         let piecesPlaced = 0;
         let totalPieces = 4;
         let showHintState = false;
+
+        // Timer State Variables
+        let timerEnabled = true;
+        let timerInterval = null;
+        let secondsElapsed = 0;
+        let bestTimes = JSON.parse(localStorage.getItem('kids_puzzle_best_times') || '{}');
+
+        // Format seconds into MM:SS format
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60).toString().padStart(2, '0');
+            const s = (sec % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        // Toggle Timer On/Off
+        function toggleTimerSetting() {
+            timerEnabled = !timerEnabled;
+            const btn = document.getElementById('timer-toggle-btn');
+            const display = document.getElementById('timer-display-container');
+
+            if (timerEnabled) {
+                btn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-500 text-white shadow hover:bg-emerald-600 transition active:scale-95';
+                btn.innerHTML = '<i class="fa-solid fa-stopwatch"></i> Timer: ON';
+                display.classList.remove('hidden');
+                startTimer();
+            } else {
+                btn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold bg-gray-400 text-white shadow hover:bg-gray-500 transition active:scale-95';
+                btn.innerHTML = '<i class="fa-solid fa-stopwatch-20"></i> Timer: OFF';
+                display.classList.add('hidden');
+                stopTimer();
+            }
+        }
+
+        function startTimer() {
+            stopTimer();
+            secondsElapsed = 0;
+            updateTimerDisplay();
+            if (timerEnabled) {
+                timerInterval = setInterval(() => {
+                    secondsElapsed++;
+                    updateTimerDisplay();
+                }, 1000);
+            }
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function updateTimerDisplay() {
+            const timerText = document.getElementById('timer-text');
+            const bestText = document.getElementById('best-time-text');
+            if (timerText) timerText.innerText = `⏱️ ${formatTime(secondsElapsed)}`;
+
+            const key = `grid_${gridSize}_img_${currentImageIndex}`;
+            if (bestText) {
+                if (bestTimes[key] !== undefined) {
+                    bestText.innerText = `Terbaik: ${formatTime(bestTimes[key])}`;
+                } else {
+                    bestText.innerText = 'Terbaik: --:--';
+                }
+            }
+        }
 
         // Sound Synthesis Setup using Tone.js
         let synth;
@@ -258,6 +345,9 @@
             piecesPlaced = 0;
             totalPieces = gridSize * gridSize;
             showHintState = false;
+
+            // Reset Timer
+            startTimer();
 
             const board = document.getElementById('puzzle-board');
             const tray = document.getElementById('pieces-tray');
@@ -482,8 +572,31 @@
 
         // Win Celebration logic
         function triggerWin() {
+            stopTimer();
             playWinSound();
             createConfetti();
+
+            // Handle Best Time Record Saving
+            const winStats = document.getElementById('win-timer-stats');
+            const finalTimeSpan = document.getElementById('final-time');
+
+            if (timerEnabled) {
+                const key = `grid_${gridSize}_img_${currentImageIndex}`;
+                let isNewBest = false;
+                if (bestTimes[key] === undefined || secondsElapsed < bestTimes[key]) {
+                    bestTimes[key] = secondsElapsed;
+                    localStorage.setItem('kids_puzzle_best_times', JSON.stringify(bestTimes));
+                    isNewBest = true;
+                }
+
+                if (finalTimeSpan) {
+                    finalTimeSpan.innerText = `${formatTime(secondsElapsed)}${isNewBest ? ' 🎉 (Rekor Baru!)' : ''}`;
+                }
+                if (winStats) winStats.classList.remove('hidden');
+            } else {
+                if (winStats) winStats.classList.add('hidden');
+            }
+
             document.getElementById('win-modal').classList.remove('hidden');
         }
 
